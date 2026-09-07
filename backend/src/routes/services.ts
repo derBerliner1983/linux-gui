@@ -91,7 +91,68 @@ function parseDuration(text: string): number {
   return Math.round(total * 1000) / 1000;
 }
 
-export interface BootUnit { name: string; seconds: number; startup: string }
+export interface BootUnit {
+  name: string;
+  seconds: number;
+  startup: string;
+  /** Unit, die abgeschaltet werden muss, damit das beim Start wegfällt. */
+  toggleUnit?: string;
+  /** 'self' = die Unit selbst, 'trigger' = ein Timer/Socket, der sie anwirft. */
+  toggleKind?: 'self' | 'trigger';
+  /** Zustand dieser Unit: 'enabled' (kann aus) oder 'disabled' (kann wieder an). */
+  toggleState?: 'enabled' | 'disabled';
+  /** Erklärung, wenn sich nichts abschalten lässt. */
+  note?: string;
+}
+
+/** Eigenschaften mehrerer Units in einem Aufruf holen. */
+function showUnits(names: string[]): Map<string, { triggeredBy: string[]; state: string }> {
+  const out = new Map<string, { triggeredBy: string[]; state: string }>();
+  const safe = names.filter((n) => UNIT_RE.test(n));
+  if (safe.length === 0) return out;
+  // In Blöcken, damit die Kommandozeile nicht zu lang wird.
+  for (let i = 0; i < safe.length; i += 40) {
+    const chunk = safe.slice(i, i + 40).map((n) => JSON.stringify(n)).join(' ');
+    const raw = safeExec(
+      `systemctl show --no-pager --property=Id --property=TriggeredBy --property=UnitFileState -- ${chunk} 2>/dev/null`,
+      15000,
+    );
+    for (const block of raw.split(/\n\s*\n/)) {
+      const id = block.match(/^Id=(.+)$/m)?.[1]?.trim();
+      if (!id) continue;
+      const trig = block.match(/^TriggeredBy=(.*)$/m)?.[1]?.trim() ?? '';
+      out.set(id, {
+        triggeredBy: trig ? trig.split(/\s+/).filter(Boolean) : [],
+        state: block.match(/^UnitFileState=(.*)$/m)?.[1]?.trim() ?? '',
+      });
+    }
+  }
+  return out;
+}
+
+/** Eingeschaltete Timer/Sockets/Paths, nach Namen. Läuft auch ohne laufendes systemd. */
+function triggerStates(): Map<string, string> {
+  const raw = safeExec('systemctl list-unit-files --type=timer,socket,path --no-legend --no-pager 2>/dev/null', 15000);
+  const map = new Map<string, string>();
+  for (const line of raw.split('\n')) {
+    const m = line.trim().match(/^(\S+)\s+(\S+)/);
+    if (m) map.set(m[1], m[2]);
+  }
+  return map;
+}
+
+/** Kurze Erklärung, warum sich der Autostart einer Unit nicht umlegen lässt. */
+function stateNote(state: string): string {
+  switch (state) {
+    case 'static': return 'fest eingebunden – wird von anderen Units angefordert';
+    case 'masked': return 'gesperrt';
+    case 'generated': return 'automatisch erzeugt (z. B. aus /etc/fstab)';
+    case 'indirect': return 'wird nur mittelbar aktiviert';
+    case 'transient': return 'nur zur Laufzeit erzeugt';
+    case '': return 'kein Autostart-Zustand hinterlegt';
+    default: return state;
+  }
+}
 
 /** Wie lange dauert der Systemstart, und welche Dienste bremsen ihn? */
 export function bootAnalysis(services: ServiceInfo[]) {
@@ -110,13 +171,49 @@ export function bootAnalysis(services: ServiceInfo[]) {
   }
   units.sort((a, b) => b.seconds - a.seconds);
 
+  // Zu jeder Bremse die Unit suchen, die man tatsächlich abschalten kann.
+  // Viele langsame Dienste sind „static" und lassen sich selbst nicht
+  // abschalten – angeworfen werden sie von einem Timer oder Socket, und der
+  // ist ein- und ausschaltbar (z. B. apt-daily.service ⟵ apt-daily.timer).
+  const top = units.slice(0, 40);
+  const info = showUnits(top.map((u) => u.name));
+  const triggers = showUnits([...new Set([...info.values()].flatMap((v) => v.triggeredBy))]);
+  const trigState = triggerStates();
+  for (const u of top) {
+    const own = info.get(u.name);
+    if (!u.startup && own?.state) u.startup = own.state;
+    if (u.startup === 'enabled' || u.startup === 'disabled') {
+      u.toggleUnit = u.name;
+      u.toggleKind = 'self';
+      u.toggleState = u.startup;
+      continue;
+    }
+    // Zustand eines Auslösers – erst aus den Laufzeitdaten, sonst von der Platte.
+    const stateOf = (t: string) => triggers.get(t)?.state || trigState.get(t) || '';
+    const base = u.name.replace(/\.[^.]+$/, '');
+    const candidates = [
+      ...(own?.triggeredBy ?? []),
+      // Notnagel, wenn systemd keine Laufzeitdaten liefert: gleichnamiger Auslöser.
+      ...[`${base}.timer`, `${base}.socket`, `${base}.path`].filter((t) => trigState.has(t)),
+    ];
+    const trigger = candidates.find((t) => stateOf(t) === 'enabled')
+      ?? candidates.find((t) => stateOf(t) === 'disabled');
+    if (trigger) {
+      u.toggleUnit = trigger;
+      u.toggleKind = 'trigger';
+      u.toggleState = stateOf(trigger) as 'enabled' | 'disabled';
+    } else {
+      u.note = stateNote(u.startup);
+    }
+  }
+
   // Gesamtdauer aus der Zusammenfassung („Startup finished in … = 12.345s")
   const totalMatch = summary.match(/=\s*([^\n]+)$/m);
   return {
     available: summary.length > 0 || units.length > 0,
     summary,
     totalSeconds: totalMatch ? parseDuration(totalMatch[1]) : 0,
-    units: units.slice(0, 40),
+    units: top,
   };
 }
 

@@ -28,9 +28,14 @@ Weboberfläche zur Verwaltung eines Linux-Servers.
 - **Starten, stoppen, neu starten** und den **Autostart** ein- und ausschalten
 - **Protokoll** je Dienst (die letzten Zeilen aus `journalctl`)
 - **Systemstart**: wie lange der Rechner braucht und welche Dienste ihn bremsen
-  (`systemd-analyze blame`). Was man nicht braucht, lässt sich direkt aus dem
-  Autostart nehmen – der Dienst bleibt installiert und ist weiter von Hand
-  startbar. Core-Hub selbst kann sich hier nicht abschalten.
+  (`systemd-analyze blame`). Was man nicht braucht, lässt sich direkt in der Liste
+  abschalten – und zwar an der Stelle, an der es wirkt: Dienste mit eigenem
+  Autostart direkt, `static`-Dienste wie `apt-daily.service` über den Timer, der
+  sie anwirft (`apt-daily.timer`). Der Knopf zeigt an, worauf er wirkt, und
+  schaltet auch wieder ein. Der Dienst bleibt installiert und ist weiter von Hand
+  startbar; wirksam wird es beim nächsten Systemstart. Lässt sich an einer Bremse
+  nichts drehen, steht dort der Grund (z. B. „fest eingebunden – wird von anderen
+  Units angefordert"). Core-Hub selbst kann sich hier nicht abschalten.
 
 ### 📁 Dateimanager
 - Ordner durchsehen mit Pfadleiste und Schnellzielen (`/`, `/etc`, `/var/log`, …)

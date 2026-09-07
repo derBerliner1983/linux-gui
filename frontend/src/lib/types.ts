@@ -201,7 +201,18 @@ export interface ServiceInfo {
   canToggleStartup: boolean;
 }
 
-export interface BootUnit { name: string; seconds: number; startup: string }
+export interface BootUnit {
+  name: string;
+  seconds: number;
+  startup: string;
+  /** Unit, die abgeschaltet werden muss – die Unit selbst oder ihr Timer/Socket. */
+  toggleUnit?: string;
+  toggleKind?: 'self' | 'trigger';
+  /** 'enabled' = lässt sich abschalten, 'disabled' = lässt sich wieder einschalten. */
+  toggleState?: 'enabled' | 'disabled';
+  /** Erklärung, wenn sich nichts abschalten lässt. */
+  note?: string;
+}
 
 export interface BootAnalysis {
   available: boolean;

@@ -56,6 +56,13 @@ const ACTION_DONE: Record<ServiceAction, string> = {
   disable: 'aus dem Autostart entfernt',
 };
 
+/** Beschriftung des Umschalters in der Startanalyse. */
+function toggleLabel(u: { toggleKind?: 'self' | 'trigger'; toggleUnit?: string }, an: boolean): string {
+  if (u.toggleKind !== 'trigger') return an ? tt('Autostart an') : tt('Autostart aus');
+  if (u.toggleUnit?.endsWith('.timer')) return an ? tt('Zeitplan an') : tt('Zeitplan aus');
+  return an ? tt('Auslöser an') : tt('Auslöser aus');
+}
+
 const secs = (n: number) => (n >= 1 ? `${n.toFixed(1)} s` : `${Math.round(n * 1000)} ms`);
 
 export function Services() {
@@ -109,6 +116,8 @@ export function Services() {
         await load();
       }
       setMsg({ type: 'ok', text: `„${name}" ${tt(ACTION_DONE[action])}.` });
+      // Der Autostart-Wechsel verändert auch die Startanalyse.
+      if (action === 'enable' || action === 'disable') void loadBoot();
     } catch (err) {
       setMsg({ type: 'err', text: err instanceof Error ? err.message : tt('Fehler') });
     } finally { setBusy(''); }
@@ -138,7 +147,7 @@ export function Services() {
     all: services.length,
   }), [services]);
 
-  /** Die Bremsen beim Systemstart – nur Dienste, die sich abschalten lassen. */
+  /** Die Bremsen beim Systemstart. */
   const slowStarters = useMemo(() => {
     if (!boot?.units) return [];
     const byName = new Map(services.map((s) => [s.name, s]));
@@ -148,6 +157,9 @@ export function Services() {
       .filter((u) => u.seconds >= 0.5)
       .slice(0, 12);
   }, [boot, services]);
+
+  /** Wie viele der Bremsen lassen sich überhaupt abschalten? */
+  const abschaltbar = slowStarters.filter((u) => u.toggleState === 'enabled').length;
 
   return (
     <>
@@ -195,41 +207,50 @@ export function Services() {
                     ) : (
                       <>
                         <div style={{ fontSize: 12.5, color: 'var(--color-muted)', marginBottom: 10 }}>
-                          <Zap size={13} style={{ verticalAlign: -2 }} /> {tt('Diese Dienste kosten beim Start am meisten Zeit. Was du nicht brauchst, kannst du aus dem Autostart nehmen – der Dienst bleibt installiert und lässt sich jederzeit von Hand starten.')}
+                          <Zap size={13} style={{ verticalAlign: -2 }} /> {tt('Diese Dienste kosten beim Start am meisten Zeit. Was du nicht brauchst, kannst du hier abschalten – der Dienst bleibt installiert und lässt sich jederzeit von Hand starten. Wirksam wird das beim nächsten Systemstart.')}
+                          {abschaltbar === 0 && (
+                            <> {tt('Hier ist gerade nichts dabei, was sich abschalten ließe – die Übrigen gehören fest zum System.')}</>
+                          )}
                         </div>
-                        <div className="table-scroll">
-                          <table className="dtable">
-                            <thead>
-                              <tr>
-                                <th style={{ width: 90 }}>{tt('Dauer')}</th>
-                                <th>{tt('Dienst')}</th>
-                                <th style={{ width: 150 }}>{tt('Autostart')}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {slowStarters.map((u) => (
-                                <tr key={u.name}>
-                                  <td style={{ fontWeight: 600, color: u.seconds >= 3 ? 'var(--color-warning)' : undefined }}>{secs(u.seconds)}</td>
-                                  <td className="dtable__mono" style={{ wordBreak: 'break-all' }}>{u.name}</td>
-                                  <td>
-                                    {u.service?.canToggleStartup && u.service.startup === 'enabled' ? (
-                                      <button
-                                        className="btn btn--outline btn--sm"
-                                        disabled={busy === `${u.name}:disable`}
-                                        onClick={() => act(u.name, 'disable')}
-                                      >
-                                        <PowerOff size={12} /> {tt('Autostart aus')}
-                                      </button>
-                                    ) : (
-                                      <span className="text-muted" style={{ fontSize: 12 }}>
-                                        {u.service ? startupText(u.service) : '—'}
-                                      </span>
+                        <div className="boot-list">
+                          {slowStarters.map((u) => (
+                            <div className="boot-row" key={u.name}>
+                              <span
+                                className="boot-row__time"
+                                style={{ color: u.seconds >= 3 ? 'var(--color-warning)' : undefined }}
+                              >
+                                {secs(u.seconds)}
+                              </span>
+                              <span className="boot-row__name dtable__mono">{u.name}</span>
+                              <span className="boot-row__action">
+                                {u.toggleUnit ? (
+                                  <>
+                                    <button
+                                      className="btn btn--outline btn--sm"
+                                      disabled={busy.startsWith(`${u.toggleUnit}:`)}
+                                      title={u.toggleKind === 'trigger'
+                                        ? `${tt('Der Dienst wird von')} „${u.toggleUnit}" ${tt('angeworfen – dieser Auslöser wird umgeschaltet.')}`
+                                        : tt('Beim Systemstart mitstarten oder nicht')}
+                                      onClick={() => act(u.toggleUnit!, u.toggleState === 'disabled' ? 'enable' : 'disable')}
+                                    >
+                                      {u.toggleState === 'disabled'
+                                        ? <><Power size={12} style={{ color: 'var(--color-success)' }} /> {toggleLabel(u, true)}</>
+                                        : <><PowerOff size={12} /> {toggleLabel(u, false)}</>}
+                                    </button>
+                                    {u.toggleKind === 'trigger' && (
+                                      <div className="dtable__mono" style={{ marginTop: 3, textAlign: 'right' }}>
+                                        {tt('über')} {u.toggleUnit}
+                                      </div>
                                     )}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                                  </>
+                                ) : (
+                                  <span className="text-muted" style={{ fontSize: 12 }}>
+                                    {u.note ? tt(u.note) : u.service ? startupText(u.service) : '—'}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       </>
                     )}

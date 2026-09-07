@@ -334,7 +334,7 @@ export function Files() {
                           <td className="dtable__mono" style={{ fontSize: 12 }}>{e.mode} <span className="text-muted">{e.modeText}</span></td>
                           <td className="text-muted" style={{ fontSize: 12, wordBreak: 'break-all' }}>{e.owner}:{e.group}</td>
                           <td>
-                            <div className="row-actions">
+                            <div className="row-actions row-actions--grid">
                               {e.type === 'file' && (
                                 <button className="btn btn--outline btn--sm" title={tt('Bearbeiten')} onClick={() => void startEdit(e)}>
                                   <Pencil size={12} />

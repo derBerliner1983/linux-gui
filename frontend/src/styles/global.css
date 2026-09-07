@@ -441,13 +441,25 @@ body {
 .dtable__sort-ind { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 3px; }
 .table-scroll { max-height: 460px; overflow-y: auto; margin: 0 -16px; padding: 0 16px; }
 
-/* Aktionsknöpfe in einer Tabellenzeile.
-   Am Schreibtisch nebeneinander; sobald es eng wird (Handy, auch quer), ein
-   festes Raster mit zwei Spalten. Ohne das bricht jeder Knopf in eine eigene
-   Zeile und eine Zeile wird sechs Knöpfe hoch. */
+/* Startbremsen im Taskmanager: als umbrechende Liste statt Tabelle, damit auf
+   dem Handy nichts seitlich wegscrollt und der Knopf erreichbar bleibt. */
+.boot-list { display: grid; gap: 2px; }
+.boot-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 0; border-bottom: 1px solid var(--color-border);
+}
+.boot-row:last-child { border-bottom: none; }
+.boot-row__time { font-weight: 600; font-size: 13px; min-width: 62px; }
+.boot-row__name { flex: 1 1 170px; min-width: 0; word-break: break-all; }
+.boot-row__action { margin-left: auto; text-align: right; }
+
+/* Aktionsknöpfe in einer Tabellenzeile: normal nebeneinander, umbrechend. */
 .row-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+/* Nur wo sehr viele Knöpfe je Zeile stehen (Dateimanager): auf schmalen
+   Schirmen ein festes Raster mit zwei Spalten, sonst wird eine Zeile sechs
+   Knöpfe hoch. Der Taskmanager behält seine Knöpfe nebeneinander. */
 @media (max-width: 1100px) {
-  .row-actions { display: grid; grid-template-columns: repeat(2, max-content); gap: 4px; }
+  .row-actions--grid { display: grid; grid-template-columns: repeat(2, max-content); gap: 4px; }
 }
 
 /* ── Toggle Switch ──────────────────────────────── */
