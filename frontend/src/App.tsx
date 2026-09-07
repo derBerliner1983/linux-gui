@@ -14,6 +14,7 @@ import { Settings } from './pages/Settings';
 import { Services } from './pages/Services';
 import { Files } from './pages/Files';
 import { Antivirus } from './pages/Antivirus';
+import { SysUpdates } from './pages/SysUpdates';
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -40,6 +41,7 @@ function AppRoutes() {
       <Route path="/terminal" element={<Protected><Terminal /></Protected>} />
       <Route path="/files" element={<Protected><Files /></Protected>} />
       <Route path="/antivirus" element={<Protected><Antivirus /></Protected>} />
+      <Route path="/updates" element={<Protected><SysUpdates /></Protected>} />
       <Route path="/account" element={<Protected><Account /></Protected>} />
       <Route path="/settings" element={<Protected><Settings /></Protected>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />

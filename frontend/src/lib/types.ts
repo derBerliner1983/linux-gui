@@ -292,3 +292,34 @@ export interface AntivirusStatus {
   canInstall: boolean;
   scan: AntivirusScan;
 }
+
+// ── System-Updates (Pakete der Distribution) ──
+export interface Upgradable {
+  name: string;
+  current: string;
+  candidate: string;
+  source: string;
+}
+
+export interface SysUpdateJob {
+  running: boolean;
+  /** Pakete dieses Laufs; leer = alles. */
+  packages: string[];
+  log: string[];
+  startedAt?: string;
+  finishedAt?: string;
+  /** null solange er läuft. */
+  ok: boolean | null;
+}
+
+export interface SysUpdates {
+  manager: string | null;
+  supported: boolean;
+  packages: Upgradable[];
+  count: number;
+  checkedAt: string;
+  error: string;
+  /** true bei pacman: einzelne Pakete werden im vollen Upgrade mitgezogen. */
+  partialUnsafe: boolean;
+  job: SysUpdateJob;
+}

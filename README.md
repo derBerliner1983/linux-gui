@@ -37,6 +37,19 @@ Weboberfläche zur Verwaltung eines Linux-Servers.
   nichts drehen, steht dort der Grund (z. B. „fest eingebunden – wird von anderen
   Units angefordert"). Core-Hub selbst kann sich hier nicht abschalten.
 
+### 📦 System-Updates
+- Zeigt, für welche **Pakete der Distribution** eine neuere Fassung bereitsteht –
+  mit installierter und verfügbarer Version, Paketquelle und Suchfeld
+- **Nach Updates suchen** liest die Paketquellen neu ein
+  (`apt-get update`, `checkupdates`/`pacman -Sy`, `dnf check-update`, `zypper refresh`)
+- Einspielen **einzeln**, **ausgewählt** (Mehrfachauswahl) oder **alle auf einmal**
+- Läuft im Hintergrund mit mitlaufendem Protokoll; die Oberfläche bleibt bedienbar
+- Auf Arch-Systemen werden einzelne Pakete bewusst immer zusammen mit dem
+  vollständigen Upgrade (`pacman -Syu`) eingespielt – Teil-Updates sind dort der
+  klassische Weg in ein kaputtes System
+- Nicht zu verwechseln mit dem Update von Core-Hub selbst: das steht in den
+  Einstellungen unter **Version & Updates**
+
 ### 🛡️ Virenschutz
 - Setzt auf **ClamAV**; fehlt es, lässt es sich mit einem Klick nachinstallieren
   (apt / pacman / dnf / zypper)

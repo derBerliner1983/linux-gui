@@ -1,7 +1,7 @@
 import type {
   User, SystemStats, VersionInfo, HardwareInfo, OptimizeSuggestion, TerminalInfo,
   UpdateSource, UpdateVersion, UpdateNotes,
-  ServiceInfo, ServiceAction, BootAnalysis, FileListing, FileSearchResult, AntivirusStatus,
+  ServiceInfo, ServiceAction, BootAnalysis, FileListing, FileSearchResult, AntivirusStatus, SysUpdates,
 } from './types';
 
 import { tt } from './i18n';
@@ -156,6 +156,14 @@ export const api = {
     scan: (path: string, exclude?: string) =>
       req<{ ok: boolean }>('/api/antivirus/scan', { method: 'POST', body: JSON.stringify({ path, exclude }) }),
     stop: () => req<{ ok: boolean }>('/api/antivirus/scan/stop', { method: 'POST' }),
+  },
+
+  // ── System-Updates (Pakete der Distribution) ──
+  sysupdates: {
+    status: () => req<SysUpdates>('/api/sysupdates'),
+    refresh: () => req<SysUpdates>('/api/sysupdates/refresh', { method: 'POST' }),
+    install: (packages: string[] = []) =>
+      req<{ ok: boolean }>('/api/sysupdates/install', { method: 'POST', body: JSON.stringify({ packages }) }),
   },
 
   prefs: {
