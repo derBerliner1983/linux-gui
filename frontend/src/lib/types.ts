@@ -254,3 +254,41 @@ export interface FileSearchResult {
   truncated: boolean;
   entries: FileEntry[];
 }
+
+// ── Virenschutz (ClamAV) ──
+export interface Infected { file: string; virus: string }
+
+export interface AntivirusScan {
+  running: boolean;
+  path: string;
+  /** clamscan oder clamdscan. */
+  engine: string;
+  startedAt?: string;
+  finishedAt?: string;
+  scanned: number;
+  /** Datei, die gerade geprüft wird. */
+  current: string;
+  infected: Infected[];
+  infectedCount: number;
+  /** true, wenn der Scan abgebrochen wurde. */
+  stopped: boolean;
+  error?: string;
+}
+
+export interface AntivirusStatus {
+  installed: boolean;
+  version: string;
+  /** Namen der systemd-Units (je Distribution verschieden). */
+  daemonUnit: string;
+  freshUnit: string;
+  daemonActive: boolean;
+  daemonEnabled: boolean;
+  freshActive: boolean;
+  freshEnabled: boolean;
+  /** Alter der Signaturen in Tagen, null = keine vorhanden. */
+  defsAgeDays: number | null;
+  packages: string[];
+  packageManager: string | null;
+  canInstall: boolean;
+  scan: AntivirusScan;
+}

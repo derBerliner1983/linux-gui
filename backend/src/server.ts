@@ -18,6 +18,7 @@ import { terminalRoutes } from './routes/terminal';
 import { prefsRoutes } from './routes/prefs';
 import { servicesRoutes } from './routes/services';
 import { filesRoutes } from './routes/files';
+import { antivirusRoutes } from './routes/antivirus';
 
 // JWT_SECRET kommt im Produktivbetrieb aus der Env-Datei (install.sh erzeugt
 // einen dauerhaften, starken Schlüssel). Fällt der weg, wird ein kryptografisch
@@ -64,6 +65,7 @@ async function main() {
   await fastify.register(prefsRoutes);
   await fastify.register(servicesRoutes);
   await fastify.register(filesRoutes);
+  await fastify.register(antivirusRoutes);
 
   const frontendDist = path.join(__dirname, '../../frontend/dist');
   const hasFrontend = fs.existsSync(path.join(frontendDist, 'index.html'));

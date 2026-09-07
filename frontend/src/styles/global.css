@@ -441,6 +441,10 @@ body {
 .dtable__sort-ind { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 3px; }
 .table-scroll { max-height: 460px; overflow-y: auto; margin: 0 -16px; padding: 0 16px; }
 
+/* Zeile mit Schiebeschalter im Virenschutz: Schalter, Text, Zustand.
+   Auf schmalen Schirmen darf der Text unter den Schalter rutschen. */
+.av-toggle { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
 /* Startbremsen im Taskmanager: als umbrechende Liste statt Tabelle, damit auf
    dem Handy nichts seitlich wegscrollt und der Knopf erreichbar bleibt. */
 .boot-list { display: grid; gap: 2px; }
