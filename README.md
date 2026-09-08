@@ -37,6 +37,35 @@ Weboberfläche zur Verwaltung eines Linux-Servers.
   nichts drehen, steht dort der Grund (z. B. „fest eingebunden – wird von anderen
   Units angefordert"). Core-Hub selbst kann sich hier nicht abschalten.
 
+### 📦 System-Updates
+- Zeigt, für welche **Pakete der Distribution** eine neuere Fassung bereitsteht –
+  mit installierter und verfügbarer Version, Paketquelle und Suchfeld
+- **Nach Updates suchen** liest die Paketquellen neu ein
+  (`apt-get update`, `checkupdates`/`pacman -Sy`, `dnf check-update`, `zypper refresh`)
+- Einspielen **einzeln**, **ausgewählt** (Mehrfachauswahl) oder **alle auf einmal**
+- Läuft im Hintergrund mit mitlaufendem Protokoll; die Oberfläche bleibt bedienbar
+- Auf Arch-Systemen werden einzelne Pakete bewusst immer zusammen mit dem
+  vollständigen Upgrade (`pacman -Syu`) eingespielt – Teil-Updates sind dort der
+  klassische Weg in ein kaputtes System
+- Nicht zu verwechseln mit dem Update von Core-Hub selbst: das steht in den
+  Einstellungen unter **Version & Updates**
+
+### 🛡️ Virenschutz
+- Setzt auf **ClamAV**; fehlt es, lässt es sich mit einem Klick nachinstallieren
+  (apt / pacman / dnf / zypper)
+- **Wächter** (`clamav-daemon`) und **automatische Signatur-Updates**
+  (`clamav-freshclam`) je mit einem Schiebeschalter an- und ausschalten; die
+  Unit-Namen werden je Distribution selbst ermittelt
+- **Signaturen von Hand aktualisieren** (`freshclam`), Alter der Signaturen sichtbar
+- **Scan starten** über einen Pfad (Schnellziele /home, /root, /opt, /srv,
+  /var/www, /tmp, /), optional mit ausgenommenen Ordnern. `/proc`, `/sys`,
+  `/dev` und `/run` werden immer übersprungen
+- **Scan stoppen**: der Scan läuft in einer eigenen Prozessgruppe und lässt sich
+  jederzeit abbrechen – der Server bleibt währenddessen bedienbar
+- Während des Scans laufen Zähler, geprüfte Datei und Fundliste mit; danach
+  bleibt das Ergebnis erhalten, auch über einen Neustart des Dienstes hinweg
+- Funde werden **nicht** automatisch gelöscht, sondern nur aufgelistet
+
 ### 📁 Dateimanager
 - Ordner durchsehen mit Pfadleiste und Schnellzielen (`/`, `/etc`, `/var/log`, …)
 - **Ordner anlegen**, umbenennen, löschen (Ordner nur mit Rückfrage samt Inhalt)

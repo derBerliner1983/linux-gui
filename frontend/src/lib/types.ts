@@ -254,3 +254,72 @@ export interface FileSearchResult {
   truncated: boolean;
   entries: FileEntry[];
 }
+
+// ── Virenschutz (ClamAV) ──
+export interface Infected { file: string; virus: string }
+
+export interface AntivirusScan {
+  running: boolean;
+  path: string;
+  /** clamscan oder clamdscan. */
+  engine: string;
+  startedAt?: string;
+  finishedAt?: string;
+  scanned: number;
+  /** Datei, die gerade geprüft wird. */
+  current: string;
+  infected: Infected[];
+  infectedCount: number;
+  /** true, wenn der Scan abgebrochen wurde. */
+  stopped: boolean;
+  error?: string;
+}
+
+export interface AntivirusStatus {
+  installed: boolean;
+  version: string;
+  /** Namen der systemd-Units (je Distribution verschieden). */
+  daemonUnit: string;
+  freshUnit: string;
+  daemonActive: boolean;
+  daemonEnabled: boolean;
+  freshActive: boolean;
+  freshEnabled: boolean;
+  /** Alter der Signaturen in Tagen, null = keine vorhanden. */
+  defsAgeDays: number | null;
+  packages: string[];
+  packageManager: string | null;
+  canInstall: boolean;
+  scan: AntivirusScan;
+}
+
+// ── System-Updates (Pakete der Distribution) ──
+export interface Upgradable {
+  name: string;
+  current: string;
+  candidate: string;
+  source: string;
+}
+
+export interface SysUpdateJob {
+  running: boolean;
+  /** Pakete dieses Laufs; leer = alles. */
+  packages: string[];
+  log: string[];
+  startedAt?: string;
+  finishedAt?: string;
+  /** null solange er läuft. */
+  ok: boolean | null;
+}
+
+export interface SysUpdates {
+  manager: string | null;
+  supported: boolean;
+  packages: Upgradable[];
+  count: number;
+  checkedAt: string;
+  error: string;
+  /** true bei pacman: einzelne Pakete werden im vollen Upgrade mitgezogen. */
+  partialUnsafe: boolean;
+  job: SysUpdateJob;
+}

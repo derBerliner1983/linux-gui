@@ -210,7 +210,12 @@ body {
   background: var(--color-surface); color: var(--color-fg);
   font-family: var(--font-sans); font-size: 13px; width: 100%; outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
+  /* Ohne min-width:0 bestimmt bei einem <select> die laengste Option die
+     Mindestbreite (hier ueber 600 px) – die ganze Seite wurde dadurch auf dem
+     Handy breiter als der Bildschirm und liess sich seitwaerts schieben. */
+  min-width: 0; max-width: 100%;
 }
+select.input { text-overflow: ellipsis; }
 .input:focus { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
 .input::placeholder { color: var(--color-faint); }
 .input--rect { border-radius: var(--radius-sm); }
@@ -440,6 +445,17 @@ body {
 .dtable th.dtable__sortable:hover { color: var(--color-muted); }
 .dtable__sort-ind { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 3px; }
 .table-scroll { max-height: 460px; overflow-y: auto; margin: 0 -16px; padding: 0 16px; }
+
+/* Herkunftszeile der Updates (Repository + Branch) über der Versionsauswahl. */
+.update-source-line {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin-top: 12px; padding: 8px 10px; font-size: 12.5px;
+  background: var(--color-surface-sunken); border-radius: 8px;
+}
+
+/* Zeile mit Schiebeschalter im Virenschutz: Schalter, Text, Zustand.
+   Auf schmalen Schirmen darf der Text unter den Schalter rutschen. */
+.av-toggle { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 /* Startbremsen im Taskmanager: als umbrechende Liste statt Tabelle, damit auf
    dem Handy nichts seitlich wegscrollt und der Knopf erreichbar bleibt. */

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshCw, ArrowUpCircle, CheckCircle2, RotateCw, ShieldCheck, Trash2,
-  GitBranch, Globe, Lock, Link2, History, FileText, GitCommit, AlertTriangle,
+  GitBranch, Globe, Lock, Link2, History, FileText, GitCommit, AlertTriangle, Pencil,
 } from 'lucide-react';
 import { Panel } from '../ui/Panel';
 import { Modal } from '../ui/Modal';
@@ -20,8 +20,12 @@ import type { VersionInfo, UpdateSource, UpdateVersion, UpdateNotes } from '../.
  * Änderbar (z. B. nach einem Repository-Umzug) und für private Repositories
  * mit Benutzername + Token/Passwort. Die Zugangsdaten werden serverseitig
  * verschlüsselt gespeichert und nie wieder ausgeliefert.
+ *
+ * Bewusst KEINE eigene Kachel: Quelle und Version gehören zusammen (aus welchem
+ * Repository kommt welche Version?). Das Formular steckt deshalb im Panel
+ * „Version & Updates" und wird dort über den Stift ein- und ausgeklappt.
  */
-export function UpdateSourcePanel({ onChanged }: { onChanged?: () => void }) {
+export function UpdateSourceForm({ onChanged, onClose }: { onChanged?: (src: UpdateSource) => void; onClose?: () => void }) {
   const [src, setSrc] = useState<UpdateSource | null>(null);
   const [url, setUrl] = useState('');
   const [branch, setBranch] = useState('');
@@ -62,7 +66,7 @@ export function UpdateSourcePanel({ onChanged }: { onChanged?: () => void }) {
       setSrc(res.source);
       setSecret('');
       setMsg({ kind: 'ok', text: tt('Update-Quelle gespeichert.') });
-      onChanged?.();
+      onChanged?.(res.source);
     } catch (err) {
       setMsg({ kind: 'err', text: err instanceof Error ? err.message : tt('Speichern fehlgeschlagen') });
     } finally { setSaving(false); }
@@ -81,14 +85,8 @@ export function UpdateSourcePanel({ onChanged }: { onChanged?: () => void }) {
   const inputStyle: React.CSSProperties = { width: '100%' };
 
   return (
-    <Panel
-      title={tt('Update-Quelle (Git-Repository)')}
-      icon={<GitBranch size={15} />}
-      subtitle={src?.configured ? src.url : tt('Standard: Repository des Checkouts')}
-      storageKey="set-update-source"
-      defaultCollapsed
-    >
-      <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
+    <div className="card" style={{ marginTop: 12 }}>
+      <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640 }}>
         <div style={{ fontSize: 12.5, color: 'var(--color-muted)' }}>
           {tt('Legt fest, aus welchem Git-Repository Core-Hub seine Updates holt. Kann jederzeit geändert werden – z. B. wenn das Repository umgezogen ist oder ein eigener Fork verwendet werden soll.')}
         </div>
@@ -176,6 +174,9 @@ export function UpdateSourcePanel({ onChanged }: { onChanged?: () => void }) {
           <button className="btn btn--outline btn--sm" disabled={testing} onClick={() => void test()}>
             {testing ? <span className="spinner" style={{ width: 12, height: 12 }} /> : <Link2 size={13} />} {tt('Verbindung testen')}
           </button>
+          {onClose && (
+            <button className="btn btn--outline btn--sm" onClick={onClose}>{tt('Schließen')}</button>
+          )}
           {src?.hasSecret && (
             <button className="btn btn--outline btn--sm" disabled={saving} onClick={() => { if (confirm(tt('Gespeicherte Zugangsdaten entfernen?'))) void save({ clearSecret: true }); }}>
               <Trash2 size={13} /> {tt('Zugangsdaten entfernen')}
@@ -189,7 +190,7 @@ export function UpdateSourcePanel({ onChanged }: { onChanged?: () => void }) {
           </div>
         )}
       </div>
-    </Panel>
+    </div>
   );
 }
 export function VersionPanel({ installCmd }: { installCmd: string }) {
@@ -212,6 +213,10 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
   const [notesErr, setNotesErr] = useState('');
+  // Update-Quelle steckt in derselben Kachel – normal nur als Zeile, zum
+  // Ändern klappt der Stift das Formular auf.
+  const [source, setSource] = useState<UpdateSource | null>(null);
+  const [sourceOpen, setSourceOpen] = useState(false);
 
   const check = useCallback(async (refresh = false) => {
     setChecking(true);
@@ -231,8 +236,12 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
     } finally { setLoadingVersions(false); }
   }, []);
 
+  const loadSource = useCallback(async () => {
+    try { setSource(await api.settings.updateSource()); } catch { /* nicht kritisch */ }
+  }, []);
+
   // Beim Laden schnell (ohne git fetch), Button „Prüfen" holt den Remote-Stand frisch
-  useEffect(() => { void check(false); void loadVersions(false); }, [check, loadVersions]);
+  useEffect(() => { void check(false); void loadVersions(false); void loadSource(); }, [check, loadVersions, loadSource]);
 
   // Notizen zum gewählten Stand laden (auch für den Standard „neueste Version")
   const loadNotes = useCallback(async (ref: string) => {
@@ -358,7 +367,7 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
     <Panel title={tt('Version & Updates')} icon={<ArrowUpCircle size={15} />} subtitle={ver ? `v${ver.current}` : undefined} storageKey="set-version"
       actions={
         <button className="btn btn--outline btn--sm" disabled={checking} onClick={() => check(true)}>
-          {checking ? <span className="spinner" style={{ width: 12, height: 12 }} /> : <RefreshCw size={13} />} Prüfen
+          {checking ? <span className="spinner" style={{ width: 12, height: 12 }} /> : <RefreshCw size={13} />} {tt('Prüfen')}
         </button>
       }
     >
@@ -376,6 +385,45 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
             </span>
           )}
         </div>
+
+        {/* Woher kommen die Updates? Eine Zeile, zum Ändern der Stift oben. */}
+        <div className="update-source-line">
+          <GitBranch size={13} style={{ color: 'var(--color-faint)', flexShrink: 0 }} />
+          <span style={{ color: 'var(--color-muted)' }}>{tt('Quelle')}:</span>
+          <span className="dtable__mono" style={{ wordBreak: 'break-all' }}>
+            {source?.url || source?.detectedUrl || tt('Repository des Checkouts')}
+          </span>
+          {(source?.branch || source?.detectedBranch) && (
+            <>
+              <span style={{ color: 'var(--color-faint)' }}>·</span>
+              <span style={{ color: 'var(--color-muted)' }}>{tt('Branch')}:</span>
+              <span className="dtable__mono">{source?.branch || source?.detectedBranch}</span>
+            </>
+          )}
+          {source?.visibility === 'private' && (
+            <span className="badge badge--paused"><span className="badge__dot" />{tt('privat')}</span>
+          )}
+          <button
+            className="btn btn--outline btn--sm"
+            style={{ marginLeft: 'auto' }}
+            title={tt('Update-Quelle bearbeiten')}
+            onClick={() => setSourceOpen((o) => !o)}
+          >
+            <Pencil size={12} /> {tt('Bearbeiten')}
+          </button>
+        </div>
+
+        {sourceOpen && (
+          <UpdateSourceForm
+            onClose={() => setSourceOpen(false)}
+            onChanged={(src) => {
+              // Andere Quelle heißt andere Versionsliste – beides neu holen.
+              setSource(src);
+              void loadVersions(true);
+              void check(true);
+            }}
+          />
+        )}
 
         {ver?.error && <div style={{ fontSize: 12.5, color: 'var(--color-warning)', marginTop: 10 }}>Versionsprüfung: {ver.error}</div>}
 
@@ -461,7 +509,7 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
                         </div>
                         {shown.body ? (
                           <div style={{
-                            fontSize: 12.5, color: 'var(--color-muted)', whiteSpace: 'pre-wrap',
+                            fontSize: 12.5, color: 'var(--color-muted)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere',
                             display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                           }}>
                             {shown.body}
@@ -521,7 +569,7 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
 
         {(updating || updateDone) && updateLog.length > 0 && (
           <div style={{ marginTop: 14 }}>
-            <div ref={logRef} style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--color-input)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px 14px', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+            <div ref={logRef} style={{ fontFamily: 'monospace', fontSize: 12, background: 'var(--color-input)', border: '1px solid var(--color-border)', borderRadius: 6, padding: '10px 14px', maxHeight: 300, overflowY: 'auto', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.6 }}>
               {updateLog.join('\n')}
               {updating && <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block', marginLeft: 6 }}>⟳</span>}
             </div>
@@ -598,7 +646,7 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
           {/* Beschreibung des Standes */}
           {notes.body && (
             <div className="card">
-              <div className="card-body" style={{ fontSize: 12.5, whiteSpace: 'pre-wrap', lineHeight: 1.65 }}>
+              <div className="card-body" style={{ fontSize: 12.5, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.65 }}>
                 {notes.body}
               </div>
             </div>
@@ -647,7 +695,7 @@ export function VersionPanel({ installCmd }: { installCmd: string }) {
                             {c.date ? ` · ${new Date(c.date).toLocaleDateString()}` : ''}
                           </div>
                           {c.body && (
-                            <div style={{ fontSize: 12, color: 'var(--color-muted)', whiteSpace: 'pre-wrap', marginTop: 6, lineHeight: 1.6 }}>
+                            <div style={{ fontSize: 12, color: 'var(--color-muted)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginTop: 6, lineHeight: 1.6 }}>
                               {c.body}
                             </div>
                           )}

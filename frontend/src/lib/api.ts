@@ -1,7 +1,7 @@
 import type {
   User, SystemStats, VersionInfo, HardwareInfo, OptimizeSuggestion, TerminalInfo,
   UpdateSource, UpdateVersion, UpdateNotes,
-  ServiceInfo, ServiceAction, BootAnalysis, FileListing, FileSearchResult,
+  ServiceInfo, ServiceAction, BootAnalysis, FileListing, FileSearchResult, AntivirusStatus, SysUpdates,
 } from './types';
 
 import { tt } from './i18n';
@@ -143,6 +143,27 @@ export const api = {
       ),
     updateNotes: (ref = '') =>
       req<UpdateNotes>(`/api/settings/update/notes${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`),
+  },
+
+  // ── Virenschutz ──
+  antivirus: {
+    status: () => req<AntivirusStatus>('/api/antivirus'),
+    install: () => req<{ ok: boolean }>('/api/antivirus/install', { method: 'POST' }),
+    toggle: (service: 'daemon' | 'fresh', enable: boolean) =>
+      req<{ ok: boolean }>('/api/antivirus/toggle', { method: 'POST', body: JSON.stringify({ service, enable }) }),
+    updateDefs: () =>
+      req<{ ok: boolean; defsAgeDays: number | null; note?: string }>('/api/antivirus/update-defs', { method: 'POST' }),
+    scan: (path: string, exclude?: string) =>
+      req<{ ok: boolean }>('/api/antivirus/scan', { method: 'POST', body: JSON.stringify({ path, exclude }) }),
+    stop: () => req<{ ok: boolean }>('/api/antivirus/scan/stop', { method: 'POST' }),
+  },
+
+  // ── System-Updates (Pakete der Distribution) ──
+  sysupdates: {
+    status: () => req<SysUpdates>('/api/sysupdates'),
+    refresh: () => req<SysUpdates>('/api/sysupdates/refresh', { method: 'POST' }),
+    install: (packages: string[] = []) =>
+      req<{ ok: boolean }>('/api/sysupdates/install', { method: 'POST', body: JSON.stringify({ packages }) }),
   },
 
   prefs: {
